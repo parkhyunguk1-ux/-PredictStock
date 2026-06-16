@@ -106,13 +106,4 @@ def get_news(ticker: str, limit: int = Query(default=5, ge=1, le=20)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/", response_class=FileResponse)
-def serve_ui():
-    return FileResponse(BASE_DIR / "static" / "index.html")
-
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")
+app.mount("/", StaticFiles(directory=BASE_DIR / "static", html=True), name="static")
