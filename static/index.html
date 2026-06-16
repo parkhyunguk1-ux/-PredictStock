@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Stock Prediction Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d2e;
+      --border: #2d3748;
+      --text: #e2e8f0;
+      --muted: #718096;
+      --dim: #4a5568;
+      --blue: #4a90d9;
+      --green: #48bb78;
+      --red: #fc8181;
+      --yellow: #ecc94b;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #1a1d2e, #16213e);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header .logo { font-size: 22px; }
+    header h1 { font-size: 16px; font-weight: 700; flex: 1; }
+    header .badge { font-size: 11px; color: var(--blue); background: #1a3a5c; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 16px; }
+
+    /* SEARCH CARD */
+    .search-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ticker-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      outline: none;
+      min-width: 0;
+    }
+    .ticker-input:focus { border-color: var(--blue); }
+    .ticker-input::placeholder { color: var(--dim); font-weight: 400; font-size: 14px; letter-spacing: 0; text-transform: none; }
+
+    .btn-list {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .days-row { display: flex; gap: 6px; margin-bottom: 12px; }
+    .day-chip {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 4px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .day-chip.active { background: #1a3a5c; border-color: var(--blue); color: var(--blue); font-weight: 600; }
+
+    .btn-predict {
+      width: 100%;
+      background: linear-gradient(135deg, #4a90d9, #357abd);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .btn-predict:disabled { opacity: 0.5; }
+
+    /* STOCK LIST MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: flex-end;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: #1a1d2e;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .modal-header h2 { font-size: 17px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; padding: 4px; }
+
+    .modal-search {
+      padding: 12px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-search input {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    .modal-search input:focus { border-color: var(--blue); }
+
+    .modal-tabs {
+      display: flex;
+      padding: 10px 16px 0;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+    .modal-body { overflow-y: auto; padding: 12px 16px 24px; flex: 1; }
+
+    .stock-section { margin-bottom: 20px; }
+    .stock-section h3 { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding-left: 2px; }
+
+    .stock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stock-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stock-item:active { opacity: 0.7; transform: scale(0.97); }
+    .stock-item .s-ticker { font-size: 14px; font-weight: 700; color: var(--text); }
+    .stock-item .s-name { font-size: 11px; color: var(--muted); }
+
+    /* LOADING */
+    .loading { display: none; text-align: center; padding: 48px 0; }
+    .loading.active { display: block; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: var(--dim); font-size: 14px; }
+
+    /* ERROR */
+    .error-box { display: none; background: #2d1515; border: 1px solid #c53030; border-radius: 12px; padding: 14px 16px; color: var(--red); margin-bottom: 16px; font-size: 14px; }
+    .error-box.active { display: block; }
+
+    /* RESULT */
+    .result { display: none; }
+    .result.active { display: block; }
+
+    /* PRICE CARD */
+    .price-card {
+      background: linear-gradient(135deg, #1a2744, #1a1d2e);
+      border: 1px solid #2a4a7f;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .price-left .p-ticker { font-size: 26px; font-weight: 800; }
+    .price-left .p-label { font-size: 11px; color: var(--dim); margin-top: 2px; }
+    .price-right { text-align: right; }
+    .price-right .p-current { font-size: 28px; font-weight: 700; }
+    .price-right .p-change { font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .up { color: var(--green); } .down { color: var(--red); }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    .card-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+    .pred-price { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .pred-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-up { background: #1a3a2a; color: var(--green); }
+    .badge-down { background: #3a1a1a; color: var(--red); }
+
+    .acc-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+    .acc-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; }
+    .acc-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue), var(--green)); }
+    .acc-pct { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    .opinion-badge { font-size: 30px; font-weight: 900; margin-bottom: 6px; }
+    .buy { color: var(--green); } .hold { color: var(--yellow); } .sell { color: var(--red); }
+    .opinion-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* ANALYSIS */
+    .analysis-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 12px; }
+    .analysis-card .card-label { margin-bottom: 12px; }
+    .analysis-text { font-size: 13px; line-height: 1.8; color: #cbd5e0; white-space: pre-wrap; word-break: break-word; }
+
+    /* TABLE */
+    .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: var(--dim); font-weight: 500; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 0; border-bottom: 1px solid #1a1d2e; color: var(--muted); }
+    td:last-child { text-align: right; color: var(--text); font-weight: 600; }
+
+    footer { text-align: center; padding: 24px 16px 40px; color: var(--dim); font-size: 11px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📈</div>
+  <h1>Stock Prediction Agent</h1>
+  <span class="badge">ML + Claude AI</span>
+</header>
+
+<div class="container">
+
+  <div class="search-card">
+    <div class="search-row">
+      <input class="ticker-input" id="tickerInput" type="text" placeholder="티커 입력 (예: AAPL)" maxlength="12" autocomplete="off" autocorrect="off" />
+      <button class="btn-list" onclick="openModal()" title="종목 목록">📋</button>
+    </div>
+
+    <div class="days-row">
+      <div class="day-chip active" data-days="3" onclick="setDays(this)">3일</div>
+      <div class="day-chip" data-days="5" onclick="setDays(this)">5일</div>
+      <div class="day-chip" data-days="10" onclick="setDays(this)">10일</div>
+      <div class="day-chip" data-days="20" onclick="setDays(this)">20일</div>
+      <div class="day-chip" data-days="30" onclick="setDays(this)">30일</div>
+    </div>
+
+    <button class="btn-predict" id="predictBtn" onclick="runPrediction()">🔍 분석 시작</button>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>AI가 분석 중입니다...<br>약 10~20초 소요됩니다</p>
+  </div>
+
+  <div class="result" id="result">
+
+    <div class="price-card">
+      <div class="price-left">
+        <div class="p-ticker" id="resTicker">—</div>
+        <div class="p-label">최근 거래일 종가</div>
+      </div>
+      <div class="price-right">
+        <div class="p-current" id="resCurrentPrice">—</div>
+        <div class="p-change" id="resChange">—</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">📊 ML 예측가</div>
+        <div class="pred-price" id="resPredPrice">—</div>
+        <div id="resPredBadge"></div>
+        <div class="acc-row">
+          <div class="acc-bar"><div class="acc-fill" id="resAccBar" style="width:0%"></div></div>
+          <span class="acc-pct" id="resAccPct">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">🤖 투자 의견</div>
+        <div class="opinion-badge" id="resOpinion">—</div>
+        <div class="opinion-desc" id="resOpinionDesc">—</div>
+      </div>
+    </div>
+
+    <div class="analysis-card">
+      <div class="card-label">📝 AI 분석 리포트</div>
+      <div class="analysis-text" id="resAnalysis">—</div>
+    </div>
+
+    <div class="table-card">
+      <div class="card-label">📋 요약 데이터</div>
+      <table><tbody id="resSummaryTable"></tbody></table>
+    </div>
+
+  </div>
+</div>
+
+<!-- 종목 목록 모달 -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>종목 선택</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-search">
+      <input id="stockSearch" type="text" placeholder="종목명 또는 티커 검색..." oninput="filterStocks()" autocomplete="off" />
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" data-tab="kr" onclick="switchTab(this)">🇰🇷 한국</button>
+      <button class="tab-btn" data-tab="us" onclick="switchTab(this)">🇺🇸 미국</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<footer>
+  ⚠️ 이 분석은 참고용이며 실제 투자 결정은 본인 책임입니다.<br>
+  과거 데이터 기반 예측으로 미래 수익을 보장하지 않습니다.
+</footer>
+
+<script>
+const STOCKS = {
+  kr: [
+    {
+      group: "반도체·전자",
+      items: [
+        { ticker: "005930.KS", name: "삼성전자" },
+        { ticker: "000660.KS", name: "SK하이닉스" },
+        { ticker: "066570.KS", name: "LG전자" },
+        { ticker: "009150.KS", name: "삼성전기" },
+        { ticker: "002440.KS", name: "주성엔지니어링" },
+      ]
+    },
+    {
+      group: "IT·플랫폼",
+      items: [
+        { ticker: "035420.KS", name: "NAVER" },
+        { ticker: "035720.KS", name: "카카오" },
+        { ticker: "259960.KS", name: "크래프톤" },
+        { ticker: "036570.KS", name: "엔씨소프트" },
+        { ticker: "263750.KS", name: "펄어비스" },
+      ]
+    },
+    {
+      group: "자동차",
+      items: [
+        { ticker: "005380.KS", name: "현대차" },
+        { ticker: "000270.KS", name: "기아" },
+        { ticker: "012330.KS", name: "현대모비스" },
+        { ticker: "064350.KS", name: "현대로템" },
+      ]
+    },
+    {
+      group: "바이오·제약",
+      items: [
+        { ticker: "207940.KS", name: "삼성바이오로직스" },
+        { ticker: "068270.KS", name: "셀트리온" },
+        { ticker: "128940.KS", name: "한미약품" },
+        { ticker: "326030.KS", name: "SK바이오팜" },
+      ]
+    },
+    {
+      group: "금융·은행",
+      items: [
+        { ticker: "105560.KS", name: "KB금융" },
+        { ticker: "055550.KS", name: "신한지주" },
+        { ticker: "086790.KS", name: "하나금융지주" },
+        { ticker: "316140.KS", name: "우리금융지주" },
+        { ticker: "032830.KS", name: "삼성생명" },
+      ]
+    },
+    {
+      group: "에너지·화학",
+      items: [
+        { ticker: "051910.KS", name: "LG화학" },
+        { ticker: "096770.KS", name: "SK이노베이션" },
+        { ticker: "010950.KS", name: "S-Oil" },
+        { ticker: "373220.KS", name: "LG에너지솔루션" },
+      ]
+    },
+    {
+      group: "소비·유통",
+      items: [
+        { ticker: "139480.KS", name: "이마트" },
+        { ticker: "004170.KS", name: "신세계" },
+        { ticker: "030000.KS", name: "제일기획" },
+        { ticker: "271560.KS", name: "오리온" },
+      ]
+    },
+  ],
+  us: [
+    {
+      group: "빅테크",
+      items: [
+        { ticker: "AAPL", name: "Apple" },
+        { ticker: "MSFT", name: "Microsoft" },
+        { ticker: "GOOGL", name: "Alphabet (Google)" },
+        { ticker: "META", name: "Meta" },
+        { ticker: "AMZN", name: "Amazon" },
+      ]
+    },
+    {
+      group: "AI·반도체",
+      items: [
+        { ticker: "NVDA", name: "NVIDIA" },
+        { ticker: "AMD", name: "AMD" },
+        { ticker: "INTC", name: "Intel" },
+        { ticker: "QCOM", name: "Qualcomm" },
+        { ticker: "AVGO", name: "Broadcom" },
+      ]
+    },
+    {
+      group: "전기차·자동차",
+      items: [
+        { ticker: "TSLA", name: "Tesla" },
+        { ticker: "F", name: "Ford" },
+        { ticker: "GM", name: "General Motors" },
+        { ticker: "RIVN", name: "Rivian" },
+      ]
+    },
+    {
+      group: "금융",
+      items: [
+        { ticker: "JPM", name: "JPMorgan Chase" },
+        { ticker: "BAC", name: "Bank of America" },
+        { ticker: "GS", name: "Goldman Sachs" },
+        { ticker: "V", name: "Visa" },
+        { ticker: "MA", name: "Mastercard" },
+      ]
+    },
+    {
+      group: "헬스케어",
+      items: [
+        { ticker: "JNJ", name: "Johnson & Johnson" },
+        { ticker: "PFE", name: "Pfizer" },
+        { ticker: "UNH", name: "UnitedHealth" },
+        { ticker: "LLY", name: "Eli Lilly" },
+        { ticker: "MRNA", name: "Moderna" },
+      ]
+    },
+    {
+      group: "소비·유통",
+      items: [
+        { ticker: "WMT", name: "Walmart" },
+        { ticker: "COST", name: "Costco" },
+        { ticker: "MCD", name: "McDonald's" },
+        { ticker: "SBUX", name: "Starbucks" },
+        { ticker: "NKE", name: "Nike" },
+      ]
+    },
+    {
+      group: "에너지",
+      items: [
+        { ticker: "XOM", name: "ExxonMobil" },
+        { ticker: "CVX", name: "Chevron" },
+        { ticker: "COP", name: "ConocoPhillips" },
+      ]
+    },
+    {
+      group: "클라우드·SaaS",
+      items: [
+        { ticker: "CRM", name: "Salesforce" },
+        { ticker: "NOW", name: "ServiceNow" },
+        { ticker: "SNOW", name: "Snowflake" },
+        { ticker: "PLTR", name: "Palantir" },
+        { ticker: "NET", name: "Cloudflare" },
+      ]
+    },
+  ]
+};
+
+let selectedDays = 3;
+let currentTab = 'kr';
+
+function setDays(el) {
+  document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedDays = parseInt(el.dataset.days);
+}
+
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('active');
+  document.getElementById('stockSearch').value = '';
+  renderStocks(currentTab, '');
+  setTimeout(() => document.getElementById('stockSearch').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentTab = el.dataset.tab;
+  renderStocks(currentTab, document.getElementById('stockSearch').value);
+}
+
+function filterStocks() {
+  renderStocks(currentTab, document.getElementById('stockSearch').value.toLowerCase());
+}
+
+function renderStocks(tab, query) {
+  const body = document.getElementById('modalBody');
+  const sections = STOCKS[tab];
+  let html = '';
+
+  sections.forEach(section => {
+    const filtered = section.items.filter(s =>
+      !query || s.ticker.toLowerCase().includes(query) || s.name.toLowerCase().includes(query)
+    );
+    if (!filtered.length) return;
+
+    html += `<div class="stock-section"><h3>${section.group}</h3><div class="stock-grid">`;
+    filtered.forEach(s => {
+      html += `<div class="stock-item" onclick="selectStock('${s.ticker}')">
+        <span class="s-ticker">${s.ticker.replace('.KS','').replace('.KQ','')}</span>
+        <span class="s-name">${s.name}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  if (!html) html = `<div style="text-align:center;padding:40px;color:var(--dim)">검색 결과가 없습니다</div>`;
+  body.innerHTML = html;
+}
+
+function selectStock(ticker) {
+  document.getElementById('tickerInput').value = ticker;
+  closeModal();
+}
+
+// ─── API ───────────────────────────────────────────
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runPrediction();
+});
+
+async function runPrediction() {
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  if (!ticker) { showError('티커를 입력해 주세요.'); return; }
+
+  hideError();
+  document.getElementById('result').classList.remove('active');
+  document.getElementById('loading').classList.add('active');
+  document.getElementById('predictBtn').disabled = true;
+
+  try {
+    const res = await fetch(`/api/predict/${ticker}?days=${selectedDays}`);
+    const data = await res.json();
+
+    if (!res.ok) { showError(data.detail || '예측 실패'); return; }
+    renderResult(data);
+  } catch (e) {
+    showError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+  } finally {
+    document.getElementById('loading').classList.remove('active');
+    document.getElementById('predictBtn').disabled = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBox');
+  el.textContent = '❌ ' + msg;
+  el.classList.add('active');
+}
+function hideError() {
+  document.getElementById('errorBox').classList.remove('active');
+}
+
+function renderResult(d) {
+  const up = d.expected_change_pct >= 0;
+  const sign = up ? '+' : '';
+  const cls = up ? 'up' : 'down';
+
+  document.getElementById('resTicker').textContent = d.ticker;
+  document.getElementById('resCurrentPrice').textContent = `$${d.current_price.toLocaleString()}`;
+  document.getElementById('resChange').innerHTML =
+    `<span class="${cls}">${sign}${d.expected_change_pct}%</span> <span style="color:var(--dim);font-size:11px">${d.days_ahead}일 예측 기준</span>`;
+
+  document.getElementById('resPredPrice').textContent = `$${d.predicted_price.toLocaleString()}`;
+  const badge = document.getElementById('resPredBadge');
+  badge.className = 'pred-badge ' + (up ? 'badge-up' : 'badge-down');
+  badge.textContent = `${sign}${d.expected_change_pct}% (${d.days_ahead}일 후)`;
+
+  document.getElementById('resAccBar').style.width = d.direction_accuracy_pct + '%';
+  document.getElementById('resAccPct').textContent = d.direction_accuracy_pct + '%';
+
+  const opMap = {
+    '매수': { label: '매수 ▲', cls: 'buy', desc: 'ML·AI 분석 결과 상승 가능성 높음' },
+    '보유': { label: '보유 ▶', cls: 'hold', desc: '현재 포지션 유지 권고' },
+    '매도': { label: '매도 ▼', cls: 'sell', desc: 'ML·AI 분석 결과 하락 위험 있음' },
+  };
+  const op = opMap[d.investment_opinion] || opMap['보유'];
+  document.getElementById('resOpinion').textContent = op.label;
+  document.getElementById('resOpinion').className = 'opinion-badge ' + op.cls;
+  document.getElementById('resOpinionDesc').textContent = op.desc;
+
+  document.getElementById('resAnalysis').textContent = d.sentiment_analysis;
+
+  document.getElementById('resSummaryTable').innerHTML = `
+    <tr><td>티커</td><td>${d.ticker}</td></tr>
+    <tr><td>현재가</td><td>$${d.current_price}</td></tr>
+    <tr><td>${d.days_ahead}일 후 예측가</td><td>$${d.predicted_price}</td></tr>
+    <tr><td>예상 변동률</td><td class="${cls}">${sign}${d.expected_change_pct}%</td></tr>
+    <tr><td>방향 정확도</td><td>${d.direction_accuracy_pct}%</td></tr>
+    <tr><td>수집 뉴스</td><td>${d.news_count}건</td></tr>
+    <tr><td>투자 의견</td><td>${d.investment_opinion}</td></tr>
+  `;
+
+  document.getElementById('result').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
