@@ -5,6 +5,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
 
 from agents.data_agent import fetch_stock_data, fetch_current_price, fetch_news
 from agents.ml_agent import predict_price
@@ -103,5 +106,8 @@ def get_news(ticker: str, limit: int = Query(default=5, ge=1, le=20)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 정적 파일 마운트는 항상 맨 마지막에
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+@app.get("/", response_class=FileResponse)
+def serve_ui():
+    return FileResponse(BASE_DIR / "static" / "index.html")
+
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
