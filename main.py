@@ -47,6 +47,11 @@ class PredictionResponse(BaseModel):
     investment_opinion: str
     sentiment_analysis: str
     news_count: int
+    current_volume: int
+    predicted_volume: int
+    volume_change_pct: float
+    volume_signal: str
+    signal_color: str
 
 
 @app.get("/api/health", tags=["Health"])
@@ -89,6 +94,11 @@ def predict(
             investment_opinion=llm_result["investment_opinion"],
             sentiment_analysis=llm_result["sentiment_analysis"],
             news_count=len(news),
+            current_volume=ml_result["current_volume"],
+            predicted_volume=ml_result["predicted_volume"],
+            volume_change_pct=ml_result["volume_change_pct"],
+            volume_signal=ml_result["volume_signal"],
+            signal_color=ml_result["signal_color"],
         )
 
     except ValueError as e:

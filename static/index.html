@@ -333,6 +333,25 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-label">📦 거래량 예측</div>
+      <div id="resVolumeSignal" style="font-size:15px;font-weight:700;margin-bottom:10px;">—</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;color:var(--dim)">현재 거래량</div>
+          <div style="font-size:16px;font-weight:700;" id="resCurrentVol">—</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--dim)">${{days}}일 후 예측</div>
+          <div style="font-size:16px;font-weight:700;" id="resPredVol">—</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--dim)">변동률</div>
+          <div style="font-size:16px;font-weight:700;" id="resVolChange">—</div>
+        </div>
+      </div>
+    </div>
+
     <div class="analysis-card">
       <div class="card-label">📝 AI 분석 리포트</div>
       <div class="analysis-text" id="resAnalysis">—</div>
@@ -652,12 +671,23 @@ function renderResult(d) {
 
   document.getElementById('resAnalysis').textContent = d.sentiment_analysis;
 
+  // 거래량 예측
+  document.getElementById('resVolumeSignal').textContent = d.volume_signal;
+  document.getElementById('resCurrentVol').textContent = d.current_volume.toLocaleString();
+  document.getElementById('resPredVol').textContent = d.predicted_volume.toLocaleString();
+  const vcls = d.volume_change_pct >= 0 ? 'up' : 'down';
+  const vsign = d.volume_change_pct >= 0 ? '+' : '';
+  document.getElementById('resVolChange').innerHTML = `<span class="${vcls}">${vsign}${d.volume_change_pct}%</span>`;
+
   document.getElementById('resSummaryTable').innerHTML = `
     <tr><td>티커</td><td>${d.ticker}</td></tr>
     <tr><td>현재가</td><td>$${d.current_price}</td></tr>
     <tr><td>${d.days_ahead}일 후 예측가</td><td>$${d.predicted_price}</td></tr>
     <tr><td>예상 변동률</td><td class="${cls}">${sign}${d.expected_change_pct}%</td></tr>
     <tr><td>방향 정확도</td><td>${d.direction_accuracy_pct}%</td></tr>
+    <tr><td>현재 거래량</td><td>${d.current_volume.toLocaleString()}</td></tr>
+    <tr><td>${d.days_ahead}일 후 예측 거래량</td><td class="${vcls}">${vsign}${d.volume_change_pct}%</td></tr>
+    <tr><td>거래량 신호</td><td>${d.volume_signal}</td></tr>
     <tr><td>수집 뉴스</td><td>${d.news_count}건</td></tr>
     <tr><td>투자 의견</td><td>${d.investment_opinion}</td></tr>
   `;
